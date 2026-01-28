@@ -110,70 +110,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
+          pip install pytest pytest-asyncio requests
 
-      - name: Start MCP server
-        run: |
-          export MCP_BEARER_TOKEN="test-token-ci"
-          python main.py > /tmp/mcp-server.log 2>&1 &
-          echo $! > /tmp/mcp-server.pid
-          sleep 2
-
-      - name: Wait for server to be ready
-        run: |
-          for i in {1..30}; do
-            if curl -s -H "Authorization: Bearer test-token-ci" http://localhost:8000/mcp > /dev/null 2>&1; then
-              echo "✓ MCP server is ready"
-              exit 0
-            fi
-            echo "Waiting for server... ($i/30)"
-            sleep 1
-          done
-          echo "✗ Server failed to start"
-          cat /tmp/mcp-server.log
-          exit 1
-
-      - name: Create MCP client test script
-        run: |
-          cat > /tmp/test_mcp_client.py << 'EOF'
-          import asyncio
-          import os
-          import sys
-          import json
-          from mcp.client.session import ClientSession
-          from mcp.client.sse import SSEClientTransport
-          
-          async def test_mcp_server():
-              transport = SSEClientTransport(
-                  url="http://localhost:8000/mcp",
-                  headers={"Authorization": "Bearer test-token-ci"}
-              )
-              async with ClientSession(transport) as session:
-                  # Initialize the session
-                  await session.initialize()
-                  
-                  # List available tools
-                  tools = await session.list_tools()
-                  
-                  print(f"✓ Successfully connected to MCP server")
-                  print(f"✓ Found {len(tools.tools)} available tools:")
-                  for tool in tools.tools:
-                      print(f"  - {tool.name}: {tool.description}")
-                  
-                  return len(tools.tools) > 0
-          
-          if __name__ == "__main__":
-              result = asyncio.run(test_mcp_server())
-              sys.exit(0 if result else 1)
-          EOF
-
-      - name: Query MCP server tools
-        run: |
-          python /tmp/test_mcp_client.py
-
-      - name: Cleanup
-        if: always()
-        run: |
-          if [ -f /tmp/mcp-server.pid ]; then
-            kill $(cat /tmp/mcp-server.pid) || true
-          fi
-          cat /tmp/mcp-server.log || true
+      - name: Run integration tests
+        run: pytest -s -vvv tests/ 

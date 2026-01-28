@@ -1,6 +1,8 @@
 # Use Python 3.14 slim image as base
 FROM python:3.14-slim
 
+LABEL org.opencontainers.image.source=https://github.com/f18m/test-mcp-server
+
 # Set working directory
 WORKDIR /app
 

@@ -11,13 +11,14 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.server.auth.settings import AuthSettings
-from mcp.server.auth.provider import AccessToken, TokenVerifier 
-from pydantic import AnyHttpUrl # type:ignore
+from mcp.server.auth.provider import AccessToken, TokenVerifier
+from pydantic import AnyHttpUrl  # type: ignore
 
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
 
 class EnvironmentTokenVerifier(TokenVerifier):
     "Token verifier che mappa token univoci ai client_id."
@@ -27,22 +28,20 @@ class EnvironmentTokenVerifier(TokenVerifier):
         # Set your Bearer token via environment variable: export MCP_BEARER_TOKEN="your-secret-token" or put it in a .env file
         BEARER_TOKEN = os.getenv("MCP_BEARER_TOKEN", "default-secret-token-change-me")
 
-        #print(f"Verifying received token: {token}")
+        # print(f"Verifying received token: {token}")
         if token == BEARER_TOKEN:
             access_token = AccessToken(
-                token=token,
-                client_id="default-client",
-                scopes=["user"]
+                token=token, client_id="default-client", scopes=["user"]
             )
             return access_token
-        
+
         return None
+
 
 # Initialize FastMCP server
 mcp = FastMCP(
     "weather",
     json_response=True,  # Enables stateless mode for better compatibility
-
     # Token verifier for authentication
     token_verifier=EnvironmentTokenVerifier(),
     # Auth settings for RFC 9728 Protected Resource Metadata
@@ -51,7 +50,6 @@ mcp = FastMCP(
         resource_server_url=AnyHttpUrl("http://localhost:8000"),  # This server's URL
         required_scopes=["user"],
     ),
-
     # see https://github.com/modelcontextprotocol/python-sdk/issues/1798
     transport_security=TransportSecuritySettings(
         enable_dns_rebinding_protection=False,
@@ -106,7 +104,7 @@ async def get_forecast(latitude: float, longitude: float, days: int = 7) -> str:
     """
     # Clamp days to valid range
     days = max(1, min(16, days))
-    
+
     url = f"{OPENMETEO_API_BASE}/forecast?latitude={latitude}&longitude={longitude}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,weather_code&forecast_days={days}&timezone=auto"
 
     data = await make_openmeteo_request(url)
@@ -120,9 +118,9 @@ if __name__ == "__main__":
     # Initialize and run the server
     mcp.settings.host = "0.0.0.0"
     mcp.settings.port = 8000
-    
+
     # please note that you need to connect to
-    #    <IP>:8000/mcp 
+    #    <IP>:8000/mcp
     # to access the MCP server
     # with Authorization header: Bearer <your-token>
     mcp.run(transport="streamable-http")

@@ -43,9 +43,9 @@ def mcp_server():
         stderr=subprocess.PIPE,
     )
 
-    #await test_mcp_server_connection()
+    # await test_mcp_server_connection()
     time.sleep(2)
-    #asyncio.run(test_mcp_server_connection())
+    # asyncio.run(test_mcp_server_connection())
 
     # Yield control back to tests
     yield process
@@ -69,7 +69,11 @@ async def test_mcp_server_connection(mcp_server):
         auth=None,
     )
 
-    async with streamable_http_client(MCP_URL, http_client=client) as (read_stream, write_stream, _):
+    async with streamable_http_client(MCP_URL, http_client=client) as (
+        read_stream,
+        write_stream,
+        _,
+    ):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
             print("✓ Successfully connected to MCP server")
@@ -83,7 +87,11 @@ async def test_mcp_server_list_tools(mcp_server):
         auth=None,
     )
 
-    async with streamable_http_client(MCP_URL, http_client=client) as (read_stream, write_stream, _):
+    async with streamable_http_client(MCP_URL, http_client=client) as (
+        read_stream,
+        write_stream,
+        _,
+    ):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
 
@@ -106,7 +114,11 @@ async def test_mcp_server_get_current_weather_tool(mcp_server):
         auth=None,
     )
 
-    async with streamable_http_client(MCP_URL, http_client=client) as (read_stream, write_stream, _):
+    async with streamable_http_client(MCP_URL, http_client=client) as (
+        read_stream,
+        write_stream,
+        _,
+    ):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
 
@@ -125,7 +137,11 @@ async def test_mcp_server_get_forecast_tool(mcp_server):
         auth=None,
     )
 
-    async with streamable_http_client(MCP_URL, http_client=client) as (read_stream, write_stream, _):
+    async with streamable_http_client(MCP_URL, http_client=client) as (
+        read_stream,
+        write_stream,
+        _,
+    ):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize()
 
@@ -134,4 +150,3 @@ async def test_mcp_server_get_forecast_tool(mcp_server):
 
             assert "get_forecast" in tool_names
             print("✓ get_forecast tool is registered")
-

@@ -2,8 +2,7 @@ version: '3.8'
 
 services:
   mcp-weather:
-    build: .
-    container_name: mcp-weather-server
+    image: ghcr.io/f18m/mcp-weather-server:latest
     ports:
       - "8000:8000"
     environment:
@@ -15,8 +14,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 5s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"

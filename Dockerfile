@@ -6,6 +6,11 @@ LABEL org.opencontainers.image.source=https://github.com/f18m/test-mcp-server
 # Set working directory
 WORKDIR /app
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy project files
 COPY pyproject.toml .
 COPY main.py .

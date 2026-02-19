@@ -8,13 +8,8 @@ import os
 import subprocess
 import time
 import pytest
-from mcp.client.session import ClientSession
-from mcp.client.streamable_http import streamable_http_client
-
-from mcp.shared._httpx_utils import (
-    McpHttpClientFactory,
-    create_mcp_http_client,
-)
+from fastmcp import Client
+from fastmcp.client.auth import BearerAuth
 
 # Test configuration
 TEST_TOKEN = "test-token-ci"
@@ -64,89 +59,54 @@ def mcp_server():
 @pytest.mark.asyncio
 async def test_mcp_server_connection(mcp_server):
     """Test that we can connect to the MCP server."""
-    client = create_mcp_http_client(
-        headers=BEARER_HEADER,
-        auth=None,
-    )
+    client = Client(MCP_URL, auth=BearerAuth(TEST_TOKEN))
 
-    async with streamable_http_client(MCP_URL, http_client=client) as (
-        read_stream,
-        write_stream,
-        _,
-    ):
-        async with ClientSession(read_stream, write_stream) as session:
-            await session.initialize()
-            print("✓ Successfully connected to MCP server")
+    async with client:
+        # Verify connection by checking server info
+        assert client.initialize_result is not None
+        print(
+            f"✓ Successfully connected to MCP server: {client.initialize_result.serverInfo.name}"
+        )
 
 
 @pytest.mark.asyncio
 async def test_mcp_server_list_tools(mcp_server):
     """Test that the MCP server returns the list of available tools."""
-    client = create_mcp_http_client(
-        headers=BEARER_HEADER,
-        auth=None,
-    )
+    client = Client(MCP_URL, auth=BearerAuth(TEST_TOKEN))
 
-    async with streamable_http_client(MCP_URL, http_client=client) as (
-        read_stream,
-        write_stream,
-        _,
-    ):
-        async with ClientSession(read_stream, write_stream) as session:
-            await session.initialize()
+    async with client:
+        # List available tools
+        tools = await client.list_tools()
 
-            # List available tools
-            tools = await session.list_tools()
-
-            # Verify we have tools
-            assert tools.tools is not None
-            assert len(tools.tools) > 0
-            print(f"✓ Found {len(tools.tools)} available tools:")
-            for tool in tools.tools:
-                print(f"  - {tool.name}: {tool.description}")
+        # Verify we have tools
+        assert tools is not None
+        assert len(tools) > 0
+        print(f"✓ Found {len(tools)} available tools:")
+        for tool in tools:
+            print(f"  - {tool.name}: {tool.description}")
 
 
 @pytest.mark.asyncio
 async def test_mcp_server_get_current_weather_tool(mcp_server):
     """Test that the get_current_weather tool is registered."""
-    client = create_mcp_http_client(
-        headers=BEARER_HEADER,
-        auth=None,
-    )
+    client = Client(MCP_URL, auth=BearerAuth(TEST_TOKEN))
 
-    async with streamable_http_client(MCP_URL, http_client=client) as (
-        read_stream,
-        write_stream,
-        _,
-    ):
-        async with ClientSession(read_stream, write_stream) as session:
-            await session.initialize()
+    async with client:
+        tools = await client.list_tools()
+        tool_names = [tool.name for tool in tools]
 
-            tools = await session.list_tools()
-            tool_names = [tool.name for tool in tools.tools]
-
-            assert "get_current_weather" in tool_names
-            print("✓ get_current_weather tool is registered")
+        assert "get_current_weather" in tool_names
+        print("✓ get_current_weather tool is registered")
 
 
 @pytest.mark.asyncio
 async def test_mcp_server_get_forecast_tool(mcp_server):
     """Test that the get_forecast tool is registered."""
-    client = create_mcp_http_client(
-        headers=BEARER_HEADER,
-        auth=None,
-    )
+    client = Client(MCP_URL, auth=BearerAuth(TEST_TOKEN))
 
-    async with streamable_http_client(MCP_URL, http_client=client) as (
-        read_stream,
-        write_stream,
-        _,
-    ):
-        async with ClientSession(read_stream, write_stream) as session:
-            await session.initialize()
+    async with client:
+        tools = await client.list_tools()
+        tool_names = [tool.name for tool in tools]
 
-            tools = await session.list_tools()
-            tool_names = [tool.name for tool in tools.tools]
-
-            assert "get_forecast" in tool_names
-            print("✓ get_forecast tool is registered")
+        assert "get_forecast" in tool_names
+        print("✓ get_forecast tool is registered")

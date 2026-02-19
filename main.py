@@ -8,11 +8,9 @@ Tested successfully to work with the OpenWebUI tool.
 from typing import Any
 import os
 import httpx
-from mcp.server.fastmcp import FastMCP
-from mcp.server.transport_security import TransportSecuritySettings
-from mcp.server.auth.settings import AuthSettings
-from mcp.server.auth.provider import AccessToken, TokenVerifier
-from pydantic import AnyHttpUrl  # type: ignore
+from fastmcp import FastMCP
+from fastmcp.server.auth.providers.debug import DebugTokenVerifier
+from fastmcp.server.middleware import PingMiddleware
 
 from dotenv import load_dotenv
 
@@ -20,41 +18,30 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class EnvironmentTokenVerifier(TokenVerifier):
-    "Token verifier che mappa token univoci ai client_id."
+# Authentication configuration
+# Set your Bearer token via environment variable: export MCP_BEARER_TOKEN="your-secret-token" or put it in a .env file
+BEARER_TOKEN = os.getenv("MCP_BEARER_TOKEN", "default-secret-token-change-me")
 
-    async def verify_token(self, token: str) -> AccessToken | None:
-        # Authentication configuration
-        # Set your Bearer token via environment variable: export MCP_BEARER_TOKEN="your-secret-token" or put it in a .env file
-        BEARER_TOKEN = os.getenv("MCP_BEARER_TOKEN", "default-secret-token-change-me")
 
-        # print(f"Verifying received token: {token}")
-        if token == BEARER_TOKEN:
-            access_token = AccessToken(
-                token=token, client_id="default-client", scopes=["user"]
-            )
-            return access_token
+# Custom token validation function
+async def validate_token(token: str) -> bool:
+    """Validate bearer token against environment variable."""
+    # print(f"Verifying received token: {token}")
+    return token == BEARER_TOKEN
 
-        return None
 
+# Initialize authentication provider
+auth = DebugTokenVerifier(
+    validate=validate_token, client_id="default-client", scopes=["user"]
+)
 
 # Initialize FastMCP server
 mcp = FastMCP(
-    "weather",
-    json_response=True,  # Enables stateless mode for better compatibility
-    # Token verifier for authentication
-    token_verifier=EnvironmentTokenVerifier(),
-    # Auth settings for RFC 9728 Protected Resource Metadata
-    auth=AuthSettings(
-        issuer_url=AnyHttpUrl("https://auth.example.com"),  # Authorization Server URL
-        resource_server_url=AnyHttpUrl("http://localhost:8000"),  # This server's URL
-        required_scopes=["user"],
-    ),
-    # see https://github.com/modelcontextprotocol/python-sdk/issues/1798
-    transport_security=TransportSecuritySettings(
-        enable_dns_rebinding_protection=False,
-    ),
+    name="weather",
+    auth=auth,
 )
+mcp.add_middleware(PingMiddleware(interval_ms=5000))
+
 
 # Constants
 OPENMETEO_API_BASE = "https://api.open-meteo.com/v1"
@@ -116,11 +103,8 @@ async def get_forecast(latitude: float, longitude: float, days: int = 7) -> str:
 
 if __name__ == "__main__":
     # Initialize and run the server
-    mcp.settings.host = "0.0.0.0"
-    mcp.settings.port = 8000
-
     # please note that you need to connect to
     #    <IP>:8000/mcp
     # to access the MCP server
     # with Authorization header: Bearer <your-token>
-    mcp.run(transport="streamable-http")
+    mcp.run(transport="http", host="0.0.0.0", port=8000)
